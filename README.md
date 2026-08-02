@@ -33,7 +33,7 @@ different checkouts can claim the same version.
 
 | pack | spektrafilm | table | profiles | size |
 | --- | --- | --- | --- | --- |
-| `packs/0.3.3` | 0.3.3 | `565f4ec4` — `irradiance_xy_tc@0.3.3` | 31 (22 filming, 9 printing) | 8.5 MB |
+| `packs/0.3.3` | 0.3.3 (current dev branch) | `565f4ec4` — `irradiance_xy_tc@0.3.3` | 31 (22 filming, 9 printing) | 8.5 MB |
 
 Older packs are kept rather than deleted. An edit developed against a table
 that is no longer current still needs that table to render the way it did when
