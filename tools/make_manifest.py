@@ -159,9 +159,68 @@ def build_pack_entry(repo, packdir, make_default):
     return entry, total
 
 
+def looks_like_packs_dir(path):
+    """True when path directly contains pack directories rather than being the
+    repository root. Checked by content, not by name, so a renamed or
+    symlinked checkout still resolves."""
+    if not os.path.isdir(path):
+        return False
+    for n in os.listdir(path):
+        if os.path.isfile(os.path.join(path, n, "pack.json")):
+            return True
+    return False
+
+
+def find_packs_dir(given):
+    """Work out where the packs live.
+
+    Accepts the repository root, the packs directory itself, or a single pack
+    directory, because all three are things you would plausibly type and only
+    one of them used to work. Returns (repo_root, packs_dir) or raises with an
+    error that says which paths were actually examined -- the previous version
+    reported only "<path>/packs: not a directory", which is the one piece of
+    information that does not help you find the mistake.
+    """
+    given = os.path.abspath(os.path.expanduser(given))
+
+    if not os.path.isdir(given):
+        raise SystemExit(f"{given}: not a directory (does this path exist?)")
+
+    # the repository root: packs/ underneath it
+    candidate = os.path.join(given, "packs")
+    if looks_like_packs_dir(candidate):
+        return given, candidate
+
+    # pointed straight at packs/
+    if looks_like_packs_dir(given):
+        return os.path.dirname(given), given
+
+    # pointed at one pack; step up twice
+    if os.path.isfile(os.path.join(given, "pack.json")):
+        packs = os.path.dirname(given)
+        return os.path.dirname(packs), packs
+
+    found = sorted(os.listdir(given))[:8]
+    raise SystemExit(
+        f"no packs found from {given}\n"
+        f"  looked for   {candidate}{os.sep}<name>{os.sep}pack.json\n"
+        f"  and for      {given}{os.sep}<name>{os.sep}pack.json\n"
+        f"  {given} contains: {', '.join(found) if found else '(empty)'}\n"
+        f"\nPass the repository root, e.g.  {sys.argv[0]} /path/to/"
+        f"darktable-spektrafilm\n"
+        f"Expected layout: <repo>/packs/<version>/pack.json"
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("repo", help="root of the data repository")
+    ap.add_argument(
+        "repo",
+        nargs="?",
+        default=None,
+        help="root of the data repository (default: the repository this script "
+        "lives in, so running it from tools/ with no argument works)",
+    )
     ap.add_argument(
         "--default",
         help="name of the pack directory under packs/ to flag as default "
@@ -170,9 +229,12 @@ def main():
     ap.add_argument("-o", "--output", help="where to write (default <repo>/manifest.json)")
     args = ap.parse_args()
 
-    packsdir = os.path.join(args.repo, "packs")
-    if not os.path.isdir(packsdir):
-        sys.exit(f"{packsdir}: not a directory")
+    # With no argument, assume this script sits at <repo>/tools/, which is where
+    # the README puts it. Running it from inside tools/ was the easiest way to
+    # trip the old error.
+    given = args.repo or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo, packsdir = find_packs_dir(given)
+    print(f"repository {repo}")
 
     names = sorted(
         n for n in os.listdir(packsdir) if os.path.isdir(os.path.join(packsdir, n))
@@ -187,7 +249,7 @@ def main():
     packs, seen = [], {}
     for name in names:
         entry, total = build_pack_entry(
-            args.repo, os.path.join(packsdir, name), name == default_name
+            repo, os.path.join(packsdir, name), name == default_name
         )
         # Two packs with one hash means a download for that hash is ambiguous
         # and the module would take whichever came first in the file.
@@ -204,7 +266,7 @@ def main():
             f"{'  (default)' if name == default_name else ''}"
         )
 
-    out = args.output or os.path.join(args.repo, "manifest.json")
+    out = args.output or os.path.join(repo, "manifest.json")
     with open(out, "w") as f:
         json.dump({"format": 1, "packs": packs}, f, indent=2)
         f.write("\n")
