@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
-#
-# Copyright (C) 2026 darktable developers.
-#
-# Tooling only. The spektrafilm profile and LUT data this script indexes is
-# CC BY-SA 4.0 by Andrea Volpato and is covered by LICENSE, not by this header.
 """Build manifest.json for a spektrafilm data repository.
 
 The manifest is what darktable's spektrafilm module reads to find out which
@@ -141,10 +135,22 @@ def build_pack_entry(repo, packdir, make_default):
     if total > MAX_TOTAL_BYTES:
         raise ValueError(f"{rel_base}: {total} bytes, module caps at {MAX_TOTAL_BYTES}")
 
+    meta_json = json.load(open(meta))
+
+    # Republish pack.json's container format so darktable can tell, from the
+    # manifest alone, whether it could load this pack -- without that it only
+    # finds out after downloading the whole thing and failing to parse it.
+    # Required, not defaulted: darktable refuses a pack that declares no
+    # format, so publishing one would only move the failure to the user.
+    if "pack_format" not in meta_json:
+        raise ValueError(f"{meta}: no pack_format, re-export this pack")
+    pack_format = int(meta_json["pack_format"])
+
     entry = {
         "lut_id": lut_id,
         "lut_hash": "%08x" % lut_hash,
-        "spektrafilm_version": json.load(open(meta)).get("spektrafilm_version", ""),
+        "pack_format": pack_format,
+        "spektrafilm_version": meta_json.get("spektrafilm_version", ""),
         "base": rel_base,
         "files": files,
     }
@@ -193,7 +199,7 @@ def main():
         seen[entry["lut_hash"]] = name
         packs.append(entry)
         print(
-            f"{name:<12} table {entry['lut_hash']}  "
+            f"{name:<12} table {entry['lut_hash']}  format {entry['pack_format']}  "
             f"{len(entry['files']):>3} files  {total / 1048576:.1f} MB"
             f"{'  (default)' if name == default_name else ''}"
         )
