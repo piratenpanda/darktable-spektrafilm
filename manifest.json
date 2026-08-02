@@ -4,6 +4,7 @@
     {
       "lut_id": "irradiance_xy_tc@0.3.3",
       "lut_hash": "565f4ec4",
+      "pack_format": 1,
       "spektrafilm_version": "0.3.3",
       "base": "packs/0.3.3",
       "files": [
