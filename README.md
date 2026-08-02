@@ -1,4 +1,4 @@
-# spektrafilm-data
+# darktable-spektrafilm
 
 Spectral data packs for the [_spektrafilm_](https://github.com/darktable-org/darktable/pull/21534)
 module in [darktable](https://github.com/darktable-org/darktable).
@@ -33,11 +33,17 @@ different checkouts can claim the same version.
 
 | pack | spektrafilm | table | profiles | size |
 | --- | --- | --- | --- | --- |
-| `packs/0.3.3` | 0.3.3 (current dev branch) | `565f4ec4` — `irradiance_xy_tc@0.3.3` | 31 (22 filming, 9 printing) | 8.5 MB |
+| `packs/0.3.3` | 0.3.3 | `565f4ec4` — `irradiance_xy_tc@0.3.3` | 31 (22 filming, 9 printing) | 8.5 MB |
 
-Older packs are kept rather than deleted. An edit developed against a table
-that is no longer current still needs that table to render the way it did when
-it was made, and deleting the pack is what makes an old edit unreproducible.
+Older packs are kept rather than deleted, and this is load-bearing rather than
+tidiness. When darktable opens an edit whose recorded table is not installed, it
+offers to fetch precisely that pack from here; dropping the entry turns that
+offer into "no pack with that spectral table is published".
+
+One caveat worth stating plainly: the recorded hash pins the *data*, not the
+module code. darktable's own rendering changes between releases, so fetching
+the original pack reproduces the spectral table an edit was made with — not
+necessarily the exact image it produced.
 
 ## Layout
 
@@ -73,11 +79,15 @@ control it, all under `plugins/darkroom/spektrafilm/` in `darktablerc`:
 | key | default | meaning |
 | --- | --- | --- |
 | `allow_download` | `false` | downloads are opt-in; nothing reaches the network until you say so |
-| `repository` | `piratenpanda/spektrafilm-data` | `owner/repo` to read from |
-| `ref` | `packs-v1` | tag or branch to read at |
+| `repository` | `piratenpanda/darktable-spektrafilm` | `owner/repo` to read from |
+| `ref` | `main` | tag or branch to read at |
 
-Prefer a tag over a branch. A branch resolves to different content over time,
-which would make the checksums in an already-fetched manifest meaningless.
+The default tracks `main`. The manifest and the files it lists are fetched in
+one pass, so a branch moving mid-download cannot install mismatched data — the
+per-file checksum catches it and the install is discarded. A tag is still worth
+cutting once the pack set settles: an immutable ref is what lets an old edit
+fetch the exact spectral table it was developed against, where a branch hands
+over whatever is current.
 
 ### Installing by hand instead
 
@@ -104,6 +114,7 @@ its table hash, where it lives, and a sha256 for every file in it:
     {
       "lut_id": "irradiance_xy_tc@0.3.3",
       "lut_hash": "565f4ec4",
+      "pack_format": 1,
       "spektrafilm_version": "0.3.3",
       "base": "packs/0.3.3",
       "default": true,
@@ -122,6 +133,29 @@ loudly — it renders plausibly wrong — which is why there is no unverified pa
 The pack flagged `default` is what a fresh edit gets. Every other pack is only
 ever fetched when an edit explicitly asks for its hash.
 
+### Pack format
+
+`pack_format` versions the *container*, not the data. It is copied from
+`pack.json` and republished here so darktable can tell from the manifest alone
+whether it could load a pack — otherwise it only finds out after downloading
+the whole thing.
+
+It is mandatory in both places. There is no format that predates the field, so
+a pack without one is a hand-edited or truncated `pack.json`, not an older
+revision — darktable refuses it and `make_manifest.py` refuses to publish it.
+
+A darktable build declares the range it reads (`SF_PACK_FORMAT_MIN`/`MAX`).
+Packs outside it are skipped during selection, and asking for one specifically
+reports "that data pack needs a newer darktable" rather than a generic failure.
+An older pack an old edit needs therefore stays fetchable indefinitely, as long
+as its format is still supported and the entry is still published.
+
+Bump `pack_format` only when the layout changes in a way an older reader would
+get *wrong*. Adding a field an older reader ignores is not that; moving or
+redefining one is. `pack.json` is a permissive JSON object, so a silently
+changed meaning would parse cleanly and render incorrectly — the version is the
+only thing standing between that and a clear error.
+
 ## Adding a pack
 
 1. Export it from the spektrafilm Python package with
@@ -135,8 +169,9 @@ ever fetched when an edit explicitly asks for its hash.
 
 4. Note the export in `CHANGELOG.txt`, which is where the license asks changes
    be recorded.
-5. Tag the commit. The `ref` preference points at a tag, so an untagged commit
-   is invisible to darktable.
+5. Push to `main`, which is what the `ref` preference tracks by default. If you
+   cut a tag instead, remember that darktable reads whichever ref the
+   preference names, not the newest one.
 
 `make_manifest.py` derives everything from the files themselves — hand-editing
 the manifest makes it drift from the pack, and the module's failure mode for
