@@ -164,14 +164,37 @@ only thing standing between that and a clear error.
 3. Regenerate the manifest and commit:
 
    ```sh
-   ./tools/make_manifest.py .
+   ./tools/make_manifest.py          # or pass the repo root explicitly
    ```
+
+   With no argument it assumes it is sitting in `<repo>/tools/`, so it works
+   from anywhere in the checkout. It also accepts the repo root, `packs/`, or a
+   single pack directory.
 
 4. Note the export in `CHANGELOG.txt`, which is where the license asks changes
    be recorded.
 5. Push to `main`, which is what the `ref` preference tracks by default. If you
    cut a tag instead, remember that darktable reads whichever ref the
    preference names, not the newest one.
+
+### Checking a pack before publishing
+
+```sh
+./tools/check_profiles.py packs/0.3.3
+```
+
+Each profile carries its density curves twice — sampled in `density_curves`,
+and as fitted sigmoid parameters in `density_curves_model` — and darktable
+renders from the model. This reconstructs every model row and reports which
+sampled column it reproduces, which catches a bad fit before it ships as a
+wrong render.
+
+It also settles an ambiguity the file format leaves open: the model's outer
+axis is the channel for a colour stock and the development time for a
+mono one, and nothing in the file says which. Reconstruction proves it.
+`--strict` additionally fails on profiles that read correctly only because
+their model rows are identical copies — correct by accident, and only until
+the exporter changes.
 
 `make_manifest.py` derives everything from the files themselves — hand-editing
 the manifest makes it drift from the pack, and the module's failure mode for
