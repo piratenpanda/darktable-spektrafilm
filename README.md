@@ -159,7 +159,7 @@ only thing standing between that and a clear error.
 ## Adding a pack
 
 1. Export it from the spektrafilm Python package with
-   `tools/spektrafilm_export_data.py` from the darktable module's tree.
+   `./tools/spektrafilm_export_data.py`.
 2. Drop it in as `packs/<version>/`.
 3. Regenerate the manifest and commit:
 
