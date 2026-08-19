@@ -79,7 +79,7 @@ control it, all under `plugins/darkroom/spektrafilm/` in `darktablerc`:
 | key | default | meaning |
 | --- | --- | --- |
 | `allow_download` | `false` | downloads are opt-in; nothing reaches the network until you say so |
-| `repository` | `piratenpanda/darktable-spektrafilm` | `owner/repo` to read from |
+| `repository` | `darktable-spektrafilm` | `owner/repo` to read from |
 | `ref` | `main` | tag or branch to read at |
 
 The default tracks `main`. The manifest and the files it lists are fetched in
