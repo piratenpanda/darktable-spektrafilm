@@ -20,6 +20,7 @@ A pack is one directory holding everything the module needs to render:
 | --- | --- |
 | `pack.json` | colour matching functions, illuminant SPDs, dichroic filter transmittances, spectral locus, neutral print filter calibrations, per-film render defaults |
 | `spectra_lut.f32` | the spectral upsampling table, float16, with a header carrying its identity hash |
+| `spectra_lut_<identifier>.f32` | further tables, `pack_format` 3 only, named in `pack.json` |
 | `profiles/*.json` | one film or paper stock each: characteristic curves, spectral sensitivities, dye densities, grain and halation parameters |
 
 Packs are identified by the **hash of the spectral upsampling table** they
@@ -55,6 +56,7 @@ packs/<version>/           one pack per spectral table
   profiles/*.json
 LICENSE                    CC BY-SA 4.0 + the spektrafilm preamble, verbatim
 CHANGELOG.txt              what the packaging changes, as the license asks
+tools/spektrafilm_export_data.py  exports a pack from an installed spektrafilm
 tools/make_manifest.py     regenerates manifest.json from the packs
 ```
 
@@ -114,7 +116,7 @@ its table hash, where it lives, and a sha256 for every file in it:
     {
       "lut_id": "irradiance_xy_tc@0.3.3",
       "lut_hash": "565f4ec4",
-      "pack_format": 1,
+      "pack_format": 2,
       "spektrafilm_version": "0.3.3",
       "base": "packs/0.3.3",
       "default": true,
@@ -159,7 +161,15 @@ only thing standing between that and a clear error.
 ## Adding a pack
 
 1. Export it from the spektrafilm Python package with
-   `./tools/spektrafilm_export_data.py`.
+
+   ```sh
+   ./tools/spektrafilm_export_data.py -o packs/<version>
+   ```
+
+   A release shipping the spectral-LUT registry exports several upsampling
+   tables and writes `pack_format` 3; pick them with `--tables` and say which
+   one a fresh edit gets with `--default-table`. An older release has one
+   table and writes `pack_format` 2.
 2. Drop it in as `packs/<version>/`.
 3. Regenerate the manifest and commit:
 
