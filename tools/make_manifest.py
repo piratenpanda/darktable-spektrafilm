@@ -15,6 +15,20 @@ Layout it expects and produces:
     <repo>/packs/<name>/spectra_lut.f32
     <repo>/packs/<name>/profiles/*.json
 
+A pack_format 3 pack carries more than one spectral upsampling table and names
+them in pack.json's "spectral_upsampling" array, one object per table:
+
+    {"identifier": "hanatos2025",       "kind": "irradiance",
+     "file": "spectra_lut.f32", "default": true}
+    {"identifier": "arctic2026beta04",  "kind": "reflectance",
+     "file": "spectra_lut_arctic2026beta04.f32", "scene_illuminant": "D65"}
+
+The fields mirror the .toml sidecars upstream ships beside each .npy, which is
+where the data comes from. A reflectance table must name the scene illuminant
+it was recovered under, because the runtime has to project chromaticity under
+that same white; an irradiance table projects under the film's own reference
+illuminant and so names nothing.
+
 Usage:
 
     ./make_manifest.py /path/to/repo                 # every pack under packs/
@@ -99,20 +113,120 @@ def read_lut_header(path):
     return lut_hash, lut_id
 
 
+def read_tables(packdir, meta_json, pack_format):
+    """The pack's spectral upsampling tables, in publication order.
+
+    Below format 3 a pack carries exactly one, unnamed in pack.json and implied
+    by the file: it is the irradiance table, and its identity is whatever its
+    own header says. Declaring that implicit table explicitly here is what lets
+    everything downstream treat both formats alike.
+    """
+    if pack_format < 3:
+        return [{"identifier": "", "kind": "irradiance",
+                 "file": "spectra_lut.f32", "default": True}]
+
+    decl = meta_json.get("spectral_upsampling")
+    if not isinstance(decl, list) or not decl:
+        raise ValueError(f"{packdir}: pack_format {pack_format} declares no "
+                         f"spectral_upsampling tables")
+
+    tables, seen_id, seen_file = [], set(), set()
+    for t in decl:
+        if not isinstance(t, dict):
+            raise ValueError(f"{packdir}: spectral_upsampling entry is not an object")
+        ident = t.get("identifier", "")
+        kind = t.get("kind", "")
+        fname = t.get("file", "")
+        if not ident:
+            raise ValueError(f"{packdir}: spectral_upsampling entry has no identifier")
+        if kind not in ("irradiance", "reflectance"):
+            raise ValueError(f"{packdir}: table {ident!r} has kind {kind!r}, "
+                             f"expected 'irradiance' or 'reflectance'")
+        if not fname or not valid_relpath(fname) or "/" in fname:
+            raise ValueError(f"{packdir}: table {ident!r} names file {fname!r}, "
+                             f"which is not a plain file name the module accepts")
+        # A reflectance table is recovered under a scene illuminant and the
+        # runtime must project chromaticity under that same white; without it
+        # the table renders with the wrong input adaptation and nothing says so.
+        if kind == "reflectance" and not t.get("scene_illuminant"):
+            raise ValueError(f"{packdir}: reflectance table {ident!r} names no "
+                             f"scene_illuminant")
+        if kind == "irradiance" and t.get("scene_illuminant"):
+            raise ValueError(f"{packdir}: irradiance table {ident!r} names a "
+                             f"scene_illuminant, which it projects under the "
+                             f"film's reference illuminant instead")
+        if ident in seen_id:
+            raise ValueError(f"{packdir}: two tables both identify as {ident!r}")
+        if fname in seen_file:
+            raise ValueError(f"{packdir}: two tables both name file {fname!r}")
+        seen_id.add(ident)
+        seen_file.add(fname)
+        tables.append(t)
+
+    defaults = [t for t in tables if t.get("default")]
+    if len(defaults) != 1:
+        raise ValueError(f"{packdir}: {len(defaults)} tables flagged default, "
+                         f"expected exactly one -- it is what a fresh edit gets")
+    return tables
+
+
 def build_pack_entry(repo, packdir, make_default):
     rel_base = os.path.relpath(packdir, repo).replace(os.sep, "/")
     if not valid_relpath(rel_base):
         raise ValueError(f"{rel_base}: pack directory name the module would reject")
 
     meta = os.path.join(packdir, "pack.json")
-    lut = os.path.join(packdir, "spectra_lut.f32")
-    for required in (meta, lut):
-        if not os.path.isfile(required):
-            raise ValueError(f"{packdir}: missing {os.path.basename(required)}")
+    if not os.path.isfile(meta):
+        raise ValueError(f"{packdir}: missing pack.json")
+    meta_json = json.load(open(meta))
 
-    lut_hash, lut_id = read_lut_header(lut)
+    # Republish pack.json's container format so darktable can tell, from the
+    # manifest alone, whether it could load this pack -- without that it only
+    # finds out after downloading the whole thing and failing to parse it.
+    # Required, not defaulted: darktable refuses a pack that declares no
+    # format, so publishing one would only move the failure to the user.
+    if "pack_format" not in meta_json:
+        raise ValueError(f"{meta}: no pack_format, re-export this pack")
+    pack_format = int(meta_json["pack_format"])
 
-    paths = ["pack.json", "spectra_lut.f32"]
+    decl = read_tables(packdir, meta_json, pack_format)
+
+    tables, default_table = [], None
+    for t in decl:
+        full = os.path.join(packdir, t["file"])
+        if not os.path.isfile(full):
+            raise ValueError(f"{packdir}: table {t['identifier'] or 'spectra_lut'!r} "
+                             f"names missing file {t['file']}")
+        # Identity comes from the table's own header, never from pack.json:
+        # a declaration can be hand-edited onto the wrong file, and the hash is
+        # what every edit records and every download is matched against.
+        lut_hash, lut_id = read_lut_header(full)
+        # The header id names the kind, not the method ("irradiance_xy_tc@0.3.3"
+        # for hanatos2025), so the declaration's identifier cannot be checked
+        # against it -- but its kind can, and confusing the two is the one
+        # mistake here that renders plausibly instead of failing: the runtime
+        # would relight a table that is already irradiance, or project an
+        # unrelit reflectance under the wrong white. Only a positive
+        # contradiction is an error; a header naming neither is accepted, since
+        # the convention is the exporter's and may reasonably grow.
+        other = "reflectance" if t["kind"] == "irradiance" else "irradiance"
+        if other in lut_id and t["kind"] not in lut_id:
+            raise ValueError(f"{packdir}: table {t['identifier']!r} is declared "
+                             f"{t['kind']} but its header says {lut_id!r}")
+        row = {
+            "identifier": t["identifier"] or lut_id,
+            "kind": t["kind"],
+            "lut_id": lut_id,
+            "lut_hash": "%08x" % lut_hash,
+            "file": t["file"],
+        }
+        if t["kind"] == "reflectance":
+            row["scene_illuminant"] = t["scene_illuminant"]
+        tables.append(row)
+        if t.get("default"):
+            default_table = row
+
+    paths = ["pack.json"] + [t["file"] for t in tables]
     profdir = os.path.join(packdir, "profiles")
     if os.path.isdir(profdir):
         paths += sorted(
@@ -135,25 +249,25 @@ def build_pack_entry(repo, packdir, make_default):
     if total > MAX_TOTAL_BYTES:
         raise ValueError(f"{rel_base}: {total} bytes, module caps at {MAX_TOTAL_BYTES}")
 
-    meta_json = json.load(open(meta))
-
-    # Republish pack.json's container format so darktable can tell, from the
-    # manifest alone, whether it could load this pack -- without that it only
-    # finds out after downloading the whole thing and failing to parse it.
-    # Required, not defaulted: darktable refuses a pack that declares no
-    # format, so publishing one would only move the failure to the user.
-    if "pack_format" not in meta_json:
-        raise ValueError(f"{meta}: no pack_format, re-export this pack")
-    pack_format = int(meta_json["pack_format"])
-
+    # lut_id / lut_hash stay the DEFAULT table's, unchanged in meaning and
+    # position, so a reader that predates multi-table packs still parses every
+    # entry it meets. It will refuse a format 3 pack on pack_format alone --
+    # which is the point of bumping it, since such a reader would otherwise
+    # load spectra_lut.f32, ignore the rest, and report a table match an edit
+    # made against another of them never had.
     entry = {
-        "lut_id": lut_id,
-        "lut_hash": "%08x" % lut_hash,
+        "lut_id": default_table["lut_id"],
+        "lut_hash": default_table["lut_hash"],
         "pack_format": pack_format,
         "spektrafilm_version": meta_json.get("spektrafilm_version", ""),
         "base": rel_base,
         "files": files,
     }
+    # Additive: one row per table, the default first. Absent below format 3,
+    # where the single table is fully described by the two fields above.
+    if pack_format >= 3:
+        entry["tables"] = ([default_table]
+                           + [t for t in tables if t is not default_table])
     if make_default:
         entry["default"] = True
     return entry, total
@@ -251,20 +365,29 @@ def main():
         entry, total = build_pack_entry(
             repo, os.path.join(packsdir, name), name == default_name
         )
-        # Two packs with one hash means a download for that hash is ambiguous
-        # and the module would take whichever came first in the file.
-        if entry["lut_hash"] in seen:
-            sys.exit(
-                f"{name} and {seen[entry['lut_hash']]} both carry table "
-                f"{entry['lut_hash']} -- publish only one"
-            )
-        seen[entry["lut_hash"]] = name
+        # Two packs carrying one table means a download for that hash is
+        # ambiguous and the module would take whichever came first in the file.
+        # Every table counts, not just the default one: an edit asks for the
+        # hash it was developed against, whichever table of its pack that was.
+        hashes = ([t["lut_hash"] for t in entry["tables"]]
+                  if "tables" in entry else [entry["lut_hash"]])
+        for h in hashes:
+            if h in seen:
+                sys.exit(
+                    f"{name} and {seen[h]} both carry table {h} -- publish only one"
+                )
+            seen[h] = name
         packs.append(entry)
         print(
-            f"{name:<12} table {entry['lut_hash']}  format {entry['pack_format']}  "
+            f"{name:<12} format {entry['pack_format']}  "
             f"{len(entry['files']):>3} files  {total / 1048576:.1f} MB"
             f"{'  (default)' if name == default_name else ''}"
         )
+        for t in (entry.get("tables") or [{"lut_hash": entry["lut_hash"],
+                                           "identifier": entry["lut_id"],
+                                           "kind": "irradiance"}]):
+            print(f"{'':<12}   table {t['lut_hash']}  {t['kind']:<11} "
+                  f"{t['identifier']}")
 
     out = args.output or os.path.join(repo, "manifest.json")
     with open(out, "w") as f:
