@@ -64,10 +64,15 @@ tools/make_manifest.py     regenerates manifest.json from the packs
 
 The module looks for a pack in two places, in order:
 
-1. `<config>/spektrafilm/` — installed by hand. Always preferred, and never
-   overwritten by anything downloaded.
-2. `<cache>/spektrafilm/packs/<lut_hash>/` — downloaded, one directory per
-   spectral table.
+1. `<user data>/darktable/spektrafilm/` — installed by hand. Always preferred,
+   and never overwritten by anything downloaded.
+2. `<user data>/darktable/spektrafilm/packs/<lut_hash>/` — downloaded, one
+   directory per spectral table.
+
+`<user data>` is `$XDG_DATA_HOME`, so `~/.local/share` on a default Linux
+setup. Not the config directory, and not the cache: a pack cannot be rebuilt
+from anything on the machine, so clearing the cache would leave every edit made
+against an older spectral table unreproducible until it was fetched again.
 
 If neither carries the table the current edit recorded, the module offers to
 fetch the matching one. If you decline, or the download fails, it renders with
@@ -97,8 +102,8 @@ Downloads are entirely optional. To skip them, copy a pack's contents into your
 darktable config directory:
 
 ```sh
-mkdir -p ~/.config/darktable/spektrafilm
-cp -r packs/0.3.3/. ~/.config/darktable/spektrafilm/
+mkdir -p ~/.local/share/darktable/spektrafilm
+cp -r packs/0.3.3/. ~/.local/share/darktable/spektrafilm/
 ```
 
 That directory takes precedence over anything the module has downloaded, so
