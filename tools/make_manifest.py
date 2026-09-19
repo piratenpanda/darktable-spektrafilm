@@ -356,8 +356,19 @@ def main():
     repo, packsdir = find_packs_dir(given)
     print(f"repository {repo}")
 
+    # Oldest first, and numerically -- "0.3.10" is newer than "0.3.9" and sorts
+    # before it as text. The order is load-bearing, not cosmetic: the module
+    # takes the FIRST manifest entry carrying the table an edit asks for, and
+    # once a release leaves the spectral table unchanged, several packs carry
+    # it. An edit recording no pack_hash predates pack identity, so the oldest
+    # pack holding its table is the one it was made with; emitting newest first
+    # would silently hand every such edit the newest profiles instead.
+    #
+    # --default is independent of this and still decides what a fresh edit gets.
     names = sorted(
-        n for n in os.listdir(packsdir) if os.path.isdir(os.path.join(packsdir, n))
+        (n for n in os.listdir(packsdir) if os.path.isdir(os.path.join(packsdir, n))),
+        key=lambda n: [int(x) if x.isdigit() else x
+                       for x in re.split(r"(\d+)", n)],
     )
     if not names:
         sys.exit(f"{packsdir}: no packs found")
