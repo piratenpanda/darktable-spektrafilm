@@ -263,7 +263,7 @@ def build_pack_entry(repo, packdir, make_default):
     entry = {
         "lut_id": default_table["lut_id"],
         "lut_hash": default_table["lut_hash"],
-        "pack_hash": meta_json.get("pack_hash", ""),
+        **({"pack_hash": meta_json["pack_hash"]} if meta_json.get("pack_hash") else {}),
         "pack_format": pack_format,
         "spektrafilm_version": meta_json.get("spektrafilm_version", ""),
         "base": rel_base,
@@ -381,12 +381,31 @@ def main():
         # edit that still names it. What must stay unique is the pack itself,
         # so an edit naming one resolves to exactly one.
         ph = entry.get("pack_hash", "")
-        if not ph:
-            sys.exit(f"{name}: pack.json declares no pack_hash -- re-export this "
-                     f"pack, an edit made against it could not name it")
-        if ph in seen:
-            sys.exit(f"{name} and {seen[ph]} are the same pack ({ph}) -- publish one")
-        seen[ph] = name
+        if ph:
+            if ph in seen:
+                sys.exit(f"{name} and {seen[ph]} are the same pack ({ph}) -- publish one")
+            seen[ph] = name
+        else:
+            # A pack published before pack_hash existed cannot gain one: its
+            # files are what edits already fetched and must stay byte-identical,
+            # and the hash lives inside pack.json. So it has no identity, and
+            # the module resolves an edit against it by table, as it always did.
+            #
+            # Which means its tables must stay unique among the other packs that
+            # also have none -- two of those carrying one table would be
+            # genuinely ambiguous, with nothing to tell them apart. An
+            # identified pack may share a table with it freely: that is what a
+            # profile-only revision looks like, and an edit naming the newer one
+            # resolves to it by pack_hash.
+            print(f"{'':<12}   no pack_hash: edits resolve to it by table")
+            for h in ([t["lut_hash"] for t in entry["tables"]]
+                      if "tables" in entry else [entry["lut_hash"]]):
+                k = "table:" + h
+                if k in seen:
+                    sys.exit(f"{name} and {seen[k]} both carry table {h} and neither "
+                             f"declares a pack_hash -- an edit could not tell them "
+                             f"apart; publish one")
+                seen[k] = name
         packs.append(entry)
         print(
             f"{name:<12} format {entry['pack_format']}  "

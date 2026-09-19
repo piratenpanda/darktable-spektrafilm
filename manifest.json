@@ -175,6 +175,203 @@
         }
       ],
       "default": true
+    },
+    {
+      "lut_id": "irradiance_xy_tc@0.3.4",
+      "lut_hash": "565f4ec4",
+      "pack_hash": "a7c3eeba",
+      "pack_format": 3,
+      "spektrafilm_version": "0.3.4",
+      "base": "packs/0.3.4",
+      "files": [
+        {
+          "path": "pack.json",
+          "size": 68789,
+          "sha256": "c4117e0efb3e8e4e8eb9852dd39afaa4571b4e390597c43fa60096e73de8701f"
+        },
+        {
+          "path": "spectra_lut.f32",
+          "size": 5972022,
+          "sha256": "877d97242b9e0b490cf93de52997309210c2376b049d370361df029488a700bb"
+        },
+        {
+          "path": "spectra_lut_arctic2026beta04.f32",
+          "size": 5972023,
+          "sha256": "36f81cfe4f9067b66eb3f78ed0863376cc75c0756a0177cd7eeb111260dd69b2"
+        },
+        {
+          "path": "profiles/fujifilm_c200.json",
+          "size": 45132,
+          "sha256": "a43655f8065e8480a1b01a2a12a8c255ea6bc58e0918b866fd237b6be32458f3"
+        },
+        {
+          "path": "profiles/fujifilm_crystal_archive_typeii.json",
+          "size": 41765,
+          "sha256": "fe1408b8b7e1fba69e58d37471d7daf9b7a18dc0fb6e658d069c2fbe357d613e"
+        },
+        {
+          "path": "profiles/fujifilm_pro_400h.json",
+          "size": 44456,
+          "sha256": "fa9534131fb6ee957626c3f9a27e43ecf41a496bc17d3d52d591f282dd9c6d14"
+        },
+        {
+          "path": "profiles/fujifilm_provia_100f.json",
+          "size": 41373,
+          "sha256": "bbab28b587850c5a608d8e39f22597f1752badedef03b2df0c3512dc27c8b756"
+        },
+        {
+          "path": "profiles/fujifilm_velvia_100.json",
+          "size": 40892,
+          "sha256": "1a5fd13def7e9c443b85f030146f09a0d845252cb26715c4d5cb17b6d405424b"
+        },
+        {
+          "path": "profiles/fujifilm_xtra_400.json",
+          "size": 44930,
+          "sha256": "de18031540d8cc242ec11f0bdf19c0b90442dce8f2a7ea0443681389fb05d57e"
+        },
+        {
+          "path": "profiles/kodak_2302.json",
+          "size": 65835,
+          "sha256": "5dded9c000ab8887b65d42212e41ed94081cdcba4b14f5143585bdf3d9d55569"
+        },
+        {
+          "path": "profiles/kodak_2383.json",
+          "size": 42153,
+          "sha256": "786524ac94e830651e86e379c9c17a3ba7dcc6ff1b7dda23a1ed06750897065f"
+        },
+        {
+          "path": "profiles/kodak_2393.json",
+          "size": 42101,
+          "sha256": "4d37a50967d0a9678956d33657e3156ef0d3f2676f7fc7f8c7992f3bf4a49b72"
+        },
+        {
+          "path": "profiles/kodak_doublex.json",
+          "size": 67729,
+          "sha256": "779b39437d4167c14406f87e829f746d59fd8ac02ea497762d36b1a8a741eb9b"
+        },
+        {
+          "path": "profiles/kodak_ektachrome_100.json",
+          "size": 41531,
+          "sha256": "3f185a9f6a68a84b3e39d3e51e222151439b1eaa8f1a665e35b8025044db68a7"
+        },
+        {
+          "path": "profiles/kodak_ektacolor_edge.json",
+          "size": 41924,
+          "sha256": "e47bc56ffb4d46a8d84e03816a9a160f17b4c7e7bc952ef1fbc6f192bdcbd360"
+        },
+        {
+          "path": "profiles/kodak_ektar_100.json",
+          "size": 43622,
+          "sha256": "3415a621835adeecdb3169325d37e962c27ef5b7be250a46f2f0cbefb2ab1607"
+        },
+        {
+          "path": "profiles/kodak_endura_premier.json",
+          "size": 41434,
+          "sha256": "146711a50bd6648c0ce1cc6d8127d541117cc9dda29ed8d059351c50a5645dc1"
+        },
+        {
+          "path": "profiles/kodak_gold_200.json",
+          "size": 44703,
+          "sha256": "a108c3d573dfdcc424762bcb9306dc8a95accd8c20fac1aa15d8729aa0fd4ea1"
+        },
+        {
+          "path": "profiles/kodak_kodachrome_64.json",
+          "size": 41420,
+          "sha256": "4c723aee11210beaaa99c04b67fb216033da9aee488eb6e04692292abb580821"
+        },
+        {
+          "path": "profiles/kodak_portra_160.json",
+          "size": 43987,
+          "sha256": "4c91228ea38c5f2d18e9f48b6ed977bbe334364edee88d08d7b63277b82c09a5"
+        },
+        {
+          "path": "profiles/kodak_portra_400.json",
+          "size": 43731,
+          "sha256": "060621024715914af81263986439c8dd1f00b5d6a92d35f7603aba4ec38982be"
+        },
+        {
+          "path": "profiles/kodak_portra_800.json",
+          "size": 44268,
+          "sha256": "fa5725eb5c45ef5fef12fc5481c2eb69ad8f86adc80633553631d1dcd480905b"
+        },
+        {
+          "path": "profiles/kodak_portra_800_push1.json",
+          "size": 44108,
+          "sha256": "ccea63e0672aacca2222f2ae28259caf800c35f34b3e778c0acc3fef6ae7dde6"
+        },
+        {
+          "path": "profiles/kodak_portra_800_push2.json",
+          "size": 44365,
+          "sha256": "46ea18e82186ebb45826ee471f88adc95abed712bf41f6db17fb4a9b7b601a49"
+        },
+        {
+          "path": "profiles/kodak_portra_endura.json",
+          "size": 41636,
+          "sha256": "585748935eff170503688e3a26326b652864bf339b5eaef437bf73a5ed648a8d"
+        },
+        {
+          "path": "profiles/kodak_supra_endura.json",
+          "size": 41567,
+          "sha256": "ab8c76fc5e135aa20a15f4759f72a1a0d1690334854021587bcd9cefdf3c757c"
+        },
+        {
+          "path": "profiles/kodak_trix.json",
+          "size": 28863,
+          "sha256": "5c68211b68677376e57ee154843aa4deafe2268d24f95d6cd0cfffbab83a18d3"
+        },
+        {
+          "path": "profiles/kodak_ultra_endura.json",
+          "size": 41419,
+          "sha256": "fb3e03366bb50af472df54cb6825296265c93c1da137b80249c7d504737c2fa6"
+        },
+        {
+          "path": "profiles/kodak_ultramax_400.json",
+          "size": 44334,
+          "sha256": "573a2f893c7f9d9d7a252df877386ccf30598e23a5e60e3d64da3af947338364"
+        },
+        {
+          "path": "profiles/kodak_verita_200d.json",
+          "size": 44273,
+          "sha256": "7dc63eae665926c37030060025c1e583e4534ae5259686d1d6f7db5bc37878d5"
+        },
+        {
+          "path": "profiles/kodak_vision3_200t.json",
+          "size": 45066,
+          "sha256": "00727c6f62a9e4475e646e7f3756d9f7a3a417f1141a7deca390292e2bc1e58b"
+        },
+        {
+          "path": "profiles/kodak_vision3_250d.json",
+          "size": 45574,
+          "sha256": "6a3f47e445de9e2e42b094d235074c0c99025329846afd8b89b6bb6ba070cf98"
+        },
+        {
+          "path": "profiles/kodak_vision3_500t.json",
+          "size": 45582,
+          "sha256": "b8b26ac585f6dc6b5c55fe7a20b16f6a4cda2d48ff9bf6f97ebc7a1211215680"
+        },
+        {
+          "path": "profiles/kodak_vision3_50d.json",
+          "size": 44485,
+          "sha256": "998ac7de13b160331ff55ca4560e3412412ffeda23bd53cb27c414b8e2c155a9"
+        }
+      ],
+      "tables": [
+        {
+          "identifier": "hanatos2025",
+          "kind": "irradiance",
+          "lut_id": "irradiance_xy_tc@0.3.4",
+          "lut_hash": "565f4ec4",
+          "file": "spectra_lut.f32"
+        },
+        {
+          "identifier": "arctic2026beta04",
+          "kind": "reflectance",
+          "lut_id": "reflectance_xy_tc@0.3.4",
+          "lut_hash": "c4c0a75a",
+          "file": "spectra_lut_arctic2026beta04.f32",
+          "scene_illuminant": "D65"
+        }
+      ]
     }
   ]
 }
