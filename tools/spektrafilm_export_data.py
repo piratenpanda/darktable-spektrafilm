@@ -345,8 +345,10 @@ def main() -> int:
             return None
         return obj
 
-    (out / "pack.json").write_text(json.dumps(_sanitize(pack)))
-    print(f"wrote {out / 'pack.json'} (spektrafilm {version})")
+    # pack.json is written at the end of main(), once the profiles exist: its
+    # pack_hash covers them, and a hash cannot be written before the thing it
+    # covers has been produced.
+    pack = _sanitize(pack)
 
     # --- stock profiles ------------------------------------------------------
     # Colour profiles are copied verbatim. Single-emulsion B&W profiles
@@ -393,6 +395,7 @@ def main() -> int:
     # curve model (centers (n_dev, n_layers)), which is how upstream stores them;
     # the module selects a member and widens to 3 channels itself.
     profile_dir = pkg_resources.files("spektrafilm.data.profiles")
+    profile_texts = {}
     n = nbw = nfam = 0
     for res in profile_dir.iterdir():
         if not res.name.endswith(".json"):
@@ -448,9 +451,41 @@ def main() -> int:
                     for row in d["channel_density"]
                 ]
             nbw += 1
-        (out / "profiles" / res.name).write_text(json.dumps(prof))
+        text = json.dumps(prof)
+        (out / "profiles" / res.name).write_text(text)
+        profile_texts[res.name] = text
         n += 1
     print(f"copied {n} profiles ({nbw} B&W, {nfam} carrying a development-time family)")
+
+    # --- pack identity --------------------------------------------------------
+    # The spectral table's hash identifies the table and nothing else, and a
+    # release can carry the same table forward unchanged -- hanatos2025 is
+    # byte-identical between 0.3.3 and 0.3.4. Two packs then present one
+    # identity while rendering differently, because the profiles moved: across
+    # those two releases every one of the 31 changed, by up to 0.42 density on
+    # the print films. An edit that recorded only the table cannot say which it
+    # was developed against, and nothing downstream can tell it was handed the
+    # other one.
+    #
+    # So the pack gets an identity of its own, over everything that decides a
+    # render: the model constants here, the profiles, and which tables are
+    # carried. Same FNV-1a the tables use, over a canonical text, so the value
+    # is reproducible from a pack directory alone by anyone who wants to check
+    # it.
+    ident = ["pack_format=%d" % pack["pack_format"],
+             "spektrafilm_version=%s" % version,
+             "constants=" + json.dumps({k: v for k, v in pack.items()
+                                        if k != "spectral_upsampling"},
+                                       sort_keys=True, separators=(",", ":"))]
+    for t in tables:
+        ident.append("table=%s:%s:%s" % (t["identifier"], t["kind"], t["file"]))
+    for name in sorted(profile_texts):
+        ident.append("profile=%s:%08x" % (name, _fnv1a(profile_texts[name].encode())))
+    pack["pack_hash"] = "%08x" % _fnv1a("\n".join(ident).encode())
+
+    (out / "pack.json").write_text(json.dumps(pack))
+    print(f"wrote {out / 'pack.json'} (spektrafilm {version}, "
+          f"pack_hash {pack['pack_hash']})")
     return 0
 
 

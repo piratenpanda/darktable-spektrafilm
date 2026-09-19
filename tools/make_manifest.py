@@ -255,9 +255,15 @@ def build_pack_entry(repo, packdir, make_default):
     # which is the point of bumping it, since such a reader would otherwise
     # load spectra_lut.f32, ignore the rest, and report a table match an edit
     # made against another of them never had.
+    # Identity of the pack, not of its table: a release can carry a table
+    # forward byte-identical while its profiles move, and then two packs share
+    # one lut_hash and render differently. Republished from pack.json so the
+    # module can match an edit to the pack it was developed against without
+    # downloading candidates to compare them.
     entry = {
         "lut_id": default_table["lut_id"],
         "lut_hash": default_table["lut_hash"],
+        "pack_hash": meta_json.get("pack_hash", ""),
         "pack_format": pack_format,
         "spektrafilm_version": meta_json.get("spektrafilm_version", ""),
         "base": rel_base,
@@ -369,14 +375,18 @@ def main():
         # ambiguous and the module would take whichever came first in the file.
         # Every table counts, not just the default one: an edit asks for the
         # hash it was developed against, whichever table of its pack that was.
-        hashes = ([t["lut_hash"] for t in entry["tables"]]
-                  if "tables" in entry else [entry["lut_hash"]])
-        for h in hashes:
-            if h in seen:
-                sys.exit(
-                    f"{name} and {seen[h]} both carry table {h} -- publish only one"
-                )
-            seen[h] = name
+        # Two packs may carry one table -- that is what happens when a release
+        # leaves the spectral table alone and revises the profiles, and
+        # refusing it would mean retiring the older pack and breaking every
+        # edit that still names it. What must stay unique is the pack itself,
+        # so an edit naming one resolves to exactly one.
+        ph = entry.get("pack_hash", "")
+        if not ph:
+            sys.exit(f"{name}: pack.json declares no pack_hash -- re-export this "
+                     f"pack, an edit made against it could not name it")
+        if ph in seen:
+            sys.exit(f"{name} and {seen[ph]} are the same pack ({ph}) -- publish one")
+        seen[ph] = name
         packs.append(entry)
         print(
             f"{name:<12} format {entry['pack_format']}  "
