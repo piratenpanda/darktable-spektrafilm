@@ -23,18 +23,35 @@ A pack is one directory holding everything the module needs to render:
 | `spectra_lut_<identifier>.f32` | further tables, `pack_format` 3 only, named in `pack.json` |
 | `profiles/*.json` | one film or paper stock each: characteristic curves, spectral sensitivities, dye densities, grain and halation parameters |
 
-Packs are identified by the **hash of the spectral upsampling table** they
-carry, not by a version string. Upstream revises that table between releases
-and each revision renders differently, so every darktable edit records the hash
-it was developed against. A version string cannot stand in for it: an editable
-dev install reports whatever `pyproject.toml` happens to say, so two materially
-different checkouts can claim the same version.
+Packs are identified by **`pack_hash`**, a hash over everything in them that
+decides a render: the model constants, every profile, and the tables carried.
+Every darktable edit records the pack it was developed against, and fetches
+that one back.
+
+A version string cannot stand in for it — an editable dev install reports
+whatever `pyproject.toml` happens to say, so two materially different checkouts
+claim the same version. Nor can the spectral table's own hash: a release can
+carry a table forward byte-identical while its profiles move. `hanatos2025` is
+the same bytes in 0.3.3 and 0.3.4, yet every one of the 31 profiles differs
+between them, by up to 0.42 density on the print films. Two packs would then
+answer to one identity and render differently.
+
+Packs published before `pack_hash` existed have none and cannot gain one — the
+hash lives inside `pack.json`, and changing that would change the files edits
+already fetched. `packs/0.3.3` is the only such pack. darktable recognises an
+edit that predates the field by its own params version and keeps it on a pack
+that declares no identity either, which is why 0.3.3 must stay published.
 
 ## Available packs
 
-| pack | spektrafilm | table | profiles | size |
-| --- | --- | --- | --- | --- |
-| `packs/0.3.3` | 0.3.3 (dev branch) | `565f4ec4` — `irradiance_xy_tc@0.3.3` | 31 (22 filming, 9 printing) | 8.5 MB |
+| pack | spektrafilm | `pack_hash` | tables | profiles | size |
+| --- | --- | --- | --- | --- | --- |
+| `packs/0.3.3` | 0.3.3 | — | `565f4ec4` `hanatos2025` | 31 (22 filming, 9 printing) | 8.5 MB |
+| `packs/0.3.4` | 0.3.4 (experimental) | `a7c3eeba` | `565f4ec4` `hanatos2025`, `c4c0a75a` `arctic2026beta04` | 31 (22 filming, 9 printing) | 12.8 MB |
+
+`packs/0.3.3` is the default: a fresh edit gets it, and 0.3.4 is reached by
+choosing one of its tables in the module. `arctic2026beta04` is a reflectance
+table and a beta — it renders differently from `hanatos2025`, not better.
 
 Older packs are kept rather than deleted, and this is load-bearing rather than
 tidiness. When darktable opens an edit whose recorded table is not installed, it
@@ -119,14 +136,21 @@ its table hash, where it lives, and a sha256 for every file in it:
   "format": 1,
   "packs": [
     {
-      "lut_id": "irradiance_xy_tc@0.3.3",
+      "lut_id": "irradiance_xy_tc@0.3.4",
       "lut_hash": "565f4ec4",
-      "pack_format": 2,
-      "spektrafilm_version": "0.3.3",
-      "base": "packs/0.3.3",
-      "default": true,
+      "pack_hash": "a7c3eeba",
+      "pack_format": 3,
+      "spektrafilm_version": "0.3.4",
+      "base": "packs/0.3.4",
       "files": [
-        { "path": "pack.json", "size": 71631, "sha256": "c70fad39…" }
+        { "path": "pack.json", "size": 68789, "sha256": "c4117e0e…" }
+      ],
+      "tables": [
+        { "identifier": "hanatos2025", "kind": "irradiance",
+          "lut_hash": "565f4ec4", "file": "spectra_lut.f32" },
+        { "identifier": "arctic2026beta04", "kind": "reflectance",
+          "lut_hash": "c4c0a75a", "file": "spectra_lut_arctic2026beta04.f32",
+          "scene_illuminant": "D65" }
       ]
     }
   ]
@@ -137,8 +161,16 @@ Every file is verified against its checksum before it is installed, and a file
 with no checksum is refused outright. A corrupt spectral LUT does not fail
 loudly — it renders plausibly wrong — which is why there is no unverified path.
 
-The pack flagged `default` is what a fresh edit gets. Every other pack is only
-ever fetched when an edit explicitly asks for its hash.
+`lut_hash` names the pack's *default* table; `tables` lists them all, default
+first. The pack flagged `default` is what a fresh edit gets. Every other pack is
+fetched when an edit asks for it by `pack_hash`, or for any table it carries.
+
+**Packs are emitted oldest first, and that order is load-bearing.** darktable
+takes the first entry carrying the table an edit asks for, and once a release
+leaves the table unchanged, several packs carry it. An edit recording no
+`pack_hash` predates pack identity, so the oldest pack holding its table is the
+one it was made with. `make_manifest.py` sorts version components numerically
+for this reason — `0.3.10` is newer than `0.3.9` and sorts before it as text.
 
 ### Pack format
 
@@ -156,6 +188,24 @@ Packs outside it are skipped during selection, and asking for one specifically
 reports "that data pack needs a newer darktable" rather than a generic failure.
 An older pack an old edit needs therefore stays fetchable indefinitely, as long
 as its format is still supported and the entry is still published.
+
+`pack_format` 3 adds the `spectral_upsampling` block: a pack may carry several
+tables, and each is named with its kind. A reflectance table must also name the
+scene illuminant it was recovered under, because the runtime projects
+chromaticity under that white rather than the film's:
+
+```json
+"spectral_upsampling": [
+  { "identifier": "hanatos2025", "kind": "irradiance",
+    "file": "spectra_lut.f32", "default": true },
+  { "identifier": "arctic2026beta04", "kind": "reflectance",
+    "file": "spectra_lut_arctic2026beta04.f32", "scene_illuminant": "D65" }
+]
+```
+
+This needed a bump rather than being additive: a format 2 reader handed such a
+pack loads `spectra_lut.f32`, ignores the rest, and then reports a table match
+to an edit developed against one of the others.
 
 Bump `pack_format` only when the layout changes in a way an older reader would
 get *wrong*. Adding a field an older reader ignores is not that; moving or
@@ -175,7 +225,10 @@ only thing standing between that and a clear error.
    tables and writes `pack_format` 3; pick them with `--tables` and say which
    one a fresh edit gets with `--default-table`. An older release has one
    table and writes `pack_format` 2.
-2. Drop it in as `packs/<version>/`.
+2. Drop it in as `packs/<version>/`. **Add, never replace.** Every published
+   pack stays published: an edit that names one reproduces only while it is
+   fetchable, and removing an entry turns that into "no pack with that spectral
+   table is published".
 3. Regenerate the manifest and commit:
 
    ```sh
@@ -188,9 +241,11 @@ only thing standing between that and a clear error.
 
 4. Note the export in `CHANGELOG.txt`, which is where the license asks changes
    be recorded.
-5. Push to `main`, which is what the `ref` preference tracks by default. If you
-   cut a tag instead, remember that darktable reads whichever ref the
-   preference names, not the newest one.
+5. Push. darktable reads whichever ref the `ref` preference names — `main` by
+   default, so a branch is only seen by someone who has pointed at it. A tag is
+   preferable where one exists: an immutable ref is what lets an old edit fetch
+   the exact data it was developed against, where a branch hands over whatever
+   is current.
 
 ### Checking a pack before publishing
 
@@ -214,9 +269,10 @@ the exporter changes.
 `make_manifest.py` derives everything from the files themselves — hand-editing
 the manifest makes it drift from the pack, and the module's failure mode for
 that is a checksum error with no explanation. It also enforces the same limits
-the module does (path shape, file count, size caps), refuses two packs carrying
-the same table hash, and checks each LUT's payload length against its own
-header. That last one matters: a truncated LUT passes the module's cheap header
+the module does (path shape, file count, size caps), refuses two packs with the same `pack_hash`, refuses two
+*unidentified* packs carrying one table (nothing could tell them apart),
+refuses a pack that declares no `pack_hash` at all unless it predates the
+field, and checks each LUT's payload length against its own header. That last one matters: a truncated LUT passes the module's cheap header
 check and only shows up later as a wrong render.
 
 ## Licensing
