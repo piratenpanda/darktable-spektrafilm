@@ -391,6 +391,7 @@ def main():
         # refusing it would mean retiring the older pack and breaking every
         # edit that still names it. What must stay unique is the pack itself,
         # so an edit naming one resolves to exactly one.
+        unidentified = False
         ph = entry.get("pack_hash", "")
         if ph:
             if ph in seen:
@@ -408,7 +409,7 @@ def main():
             # identified pack may share a table with it freely: that is what a
             # profile-only revision looks like, and an edit naming the newer one
             # resolves to it by pack_hash.
-            print(f"{'':<12}   no pack_hash: edits resolve to it by table")
+            unidentified = True
             for h in ([t["lut_hash"] for t in entry["tables"]]
                       if "tables" in entry else [entry["lut_hash"]]):
                 k = "table:" + h
@@ -428,6 +429,9 @@ def main():
                                            "kind": "irradiance"}]):
             print(f"{'':<12}   table {t['lut_hash']}  {t['kind']:<11} "
                   f"{t['identifier']}")
+        # after the pack it describes, not before it
+        if unidentified:
+            print(f"{'':<12}   no pack_hash: edits resolve to it by table")
 
     out = args.output or os.path.join(repo, "manifest.json")
     with open(out, "w") as f:
