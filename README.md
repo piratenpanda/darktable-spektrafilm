@@ -50,7 +50,9 @@ that declares no identity either, which is why 0.3.3 must stay published.
 | `packs/0.3.4` | 0.3.4 (experimental) | `a7c3eeba` | `565f4ec4` `hanatos2025`, `c4c0a75a` `arctic2026beta04` | 31 (22 filming, 9 printing) | 12.8 MB |
 
 `packs/0.3.3` is the default: a fresh edit gets it, and 0.3.4 is reached by
-choosing one of its tables in the module. `arctic2026beta04` is a reflectance
+choosing one of its tables in the module, or fetched with the module's "check
+for data pack updates" button, which installs it beside 0.3.3 without moving
+any existing edit. `arctic2026beta04` is a reflectance
 table and a beta — it renders differently from `hanatos2025`, not better.
 
 Older packs are kept rather than deleted, and this is load-bearing rather than
@@ -67,7 +69,7 @@ necessarily the exact image it produced.
 
 ```
 manifest.json              index: every pack, every file, every checksum
-packs/<version>/           one pack per spectral table
+packs/<version>/           one pack per release
   pack.json
   spectra_lut.f32
   profiles/*.json
@@ -83,8 +85,10 @@ The module looks for a pack in two places, in order:
 
 1. `<user data>/darktable/spektrafilm/` — installed by hand. Always preferred,
    and never overwritten by anything downloaded.
-2. `<user data>/darktable/spektrafilm/packs/<lut_hash>/` — downloaded, one
-   directory per spectral table.
+2. `<user data>/darktable/spektrafilm/packs/<hash>/` — downloaded, one
+   directory per pack, named for its `pack_hash`, or for its default table's
+   `lut_hash` when it declares none. Packs sharing a table, as 0.3.3 and 0.3.4
+   do, therefore install side by side.
 
 `<user data>` is `$XDG_DATA_HOME`, so `~/.local/share` on a default Linux
 setup. Not the config directory, and not the cache: a pack cannot be rebuilt
