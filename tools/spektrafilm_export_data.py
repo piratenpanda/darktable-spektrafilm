@@ -4,7 +4,7 @@
 This is the version-upgrade mechanism: when a new spektrafilm release comes out,
 
     pip install <new spektrafilm>          (or pip install -e <checkout>)
-    python spektrafilm_export_data.py -o ~/.config/darktable/spektrafilm
+    python spektrafilm_export_data.py -o ~/.local/share/darktable/spektrafilm
 
 and the darktable module picks up the new profiles / data on restart. The
 module itself contains only the *algorithms* (which track the spektrafilm
@@ -118,6 +118,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("-o", "--output", required=True, help="output pack directory")
     ap.add_argument(
+        "--force", action="store_true",
+        help="write over a directory that already holds a pack. A published "
+             "pack is never replaced, since edits fetch it by its checksums; "
+             "this is for refreshing a hand-installed one")
+    ap.add_argument(
         "--tables", default="hanatos2025,arctic2026beta04",
         help="spectral upsampling tables to export, comma separated. Ignored by "
              "a release with no LUT registry, which has only one. Every table "
@@ -151,6 +156,11 @@ def main() -> int:
         get_lut_spectra = lut_descriptor = None
 
     out = Path(args.output)
+    if (out / "pack.json").exists() and not args.force:
+        print(f"{out} already holds a pack. Export a new release into a new "
+              "directory, or pass --force to replace a hand-installed pack",
+              file=sys.stderr)
+        return 1
     out.mkdir(parents=True, exist_ok=True)
     (out / "profiles").mkdir(exist_ok=True)
 
