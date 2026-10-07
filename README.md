@@ -47,7 +47,7 @@ that declares no identity either, which is why 0.3.3 must stay published.
 | pack | spektrafilm | `pack_hash` | tables | profiles | size |
 | --- | --- | --- | --- | --- | --- |
 | `packs/0.3.3` | 0.3.3 | — | `565f4ec4` `hanatos2025` | 31 (22 filming, 9 printing) | 8.5 MB |
-| `packs/0.3.4` | 0.3.4 (experimental) | `a7c3eeba` | `565f4ec4` `hanatos2025`, `c4c0a75a` `arctic2026beta04` | 31 (22 filming, 9 printing) | 12.8 MB |
+| `packs/0.3.4` | 0.3.4 (experimental) | `e7405541` | `565f4ec4` `hanatos2025`, `c4c0a75a` `arctic2026beta04` | 31 (22 filming, 9 printing) | 12.8 MB |
 
 `packs/0.3.3` is the default: a fresh edit gets it, and 0.3.4 is reached by
 choosing one of its tables in the module, or fetched with the module's "check
@@ -142,12 +142,12 @@ its table hash, where it lives, and a sha256 for every file in it:
     {
       "lut_id": "irradiance_xy_tc@0.3.4",
       "lut_hash": "565f4ec4",
-      "pack_hash": "a7c3eeba",
+      "pack_hash": "e7405541",
       "pack_format": 3,
       "spektrafilm_version": "0.3.4",
       "base": "packs/0.3.4",
       "files": [
-        { "path": "pack.json", "size": 68789, "sha256": "c4117e0e…" }
+        { "path": "pack.json", "size": 68789, "sha256": "8d5b4e64…" }
       ],
       "tables": [
         { "identifier": "hanatos2025", "kind": "irradiance",
