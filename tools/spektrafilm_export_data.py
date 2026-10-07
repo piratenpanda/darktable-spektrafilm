@@ -450,6 +450,13 @@ def main() -> int:
                    and isinstance(d["density_curves"][0], list) \
                    and len(d["density_curves"][0]) == 1:
                     d["density_curves"] = [row * 3 for row in d["density_curves"]]
+                # base+fog is a single spectrum, (n_wl,). A one-member family
+                # arrives as (n_wl, 1), which the reader takes for a vector of
+                # rows and reads as zeros.
+                if "base_density" in d and d["base_density"] \
+                   and isinstance(d["base_density"][0], list) \
+                   and len(d["base_density"][0]) == 1:
+                    d["base_density"] = [row[0] for row in d["base_density"]]
             # log_sensitivity is one panchromatic curve either way
             if "log_sensitivity" in d and d["log_sensitivity"] \
                and isinstance(d["log_sensitivity"][0], list) and len(d["log_sensitivity"][0]) == 1:

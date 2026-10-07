@@ -115,6 +115,24 @@ def check_profile(path):
         return "skip", os.path.basename(path), "not a profile"
     info, data = d["info"], d["data"]
     stock = info.get("stock", os.path.basename(path))
+
+    # base_density is one spectrum, or one per development time for a family.
+    # The reader takes a single-time stock's base density as a flat vector, so
+    # any nesting there reads as zeros.
+    times = data.get("development_time") or []
+    n_times = len(times) if isinstance(times, list) else 1
+    bd = data.get("base_density") or []
+    if bd and n_times <= 1 and isinstance(bd[0], list):
+        return "misread", stock, (
+            f"base_density is {len(bd)}x{len(bd[0])} for a single development "
+            f"time; the reader expects a flat vector and reads it as zeros"
+        )
+    if bd and n_times > 1 and not (isinstance(bd[0], list) and len(bd[0]) == n_times):
+        return "misread", stock, (
+            f"base_density does not carry one column per development time "
+            f"({n_times})"
+        )
+
     model = data.get("density_curves_model")
     if not model or not model.get("centers"):
         return "skip", stock, "no density_curves_model"
