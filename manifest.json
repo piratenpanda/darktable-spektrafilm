@@ -179,7 +179,7 @@
     {
       "lut_id": "irradiance_xy_tc@0.3.4",
       "lut_hash": "565f4ec4",
-      "pack_hash": "a7c3eeba",
+      "pack_hash": "e7405541",
       "pack_format": 3,
       "spektrafilm_version": "0.3.4",
       "base": "packs/0.3.4",
@@ -187,7 +187,7 @@
         {
           "path": "pack.json",
           "size": 68789,
-          "sha256": "c4117e0efb3e8e4e8eb9852dd39afaa4571b4e390597c43fa60096e73de8701f"
+          "sha256": "8d5b4e648d2b768e8622a8a2baa65495b9536f47431cecb820ffa1c054b88870"
         },
         {
           "path": "spectra_lut.f32",
@@ -316,8 +316,8 @@
         },
         {
           "path": "profiles/kodak_trix.json",
-          "size": 28863,
-          "sha256": "5c68211b68677376e57ee154843aa4deafe2268d24f95d6cd0cfffbab83a18d3"
+          "size": 28701,
+          "sha256": "1865f05562d9efc8a4db542fd11c4081d18a3c66a669df1833c2c3c0b862bce9"
         },
         {
           "path": "profiles/kodak_ultra_endura.json",
